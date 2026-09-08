@@ -1,0 +1,23 @@
+{
+  "name": "campo-minado",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Campo Minado moderno em JavaScript puro: modo sem chute, recordes, acessibilidade e tema claro/escuro.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "campo-minado",
+    "minesweeper",
+    "jogo",
+    "javascript",
+    "sem-dependencias"
+  ],
+  "license": "MIT"
+}

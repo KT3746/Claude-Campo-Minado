@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="sistema">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Campo Minado moderno: modo sem chute, recordes, atalhos de teclado, suporte a toque e tema claro/escuro. Sem dependências.">
+<meta name="theme-color" content="#0e1220" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef1f7" media="(prefers-color-scheme: light)">
+<title>Campo Minado</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%234f7cff'/><circle cx='16' cy='17' r='7.5' fill='%230e1220'/><path d='M16 3.5v4M16 26.5v4M3.5 17h4M24.5 17h4M8 9l2.8 2.8M21.2 22.2 24 25M24 9l-2.8 2.8M10.8 22.2 8 25' stroke='%230e1220' stroke-width='2.4' stroke-linecap='round'/><circle cx='13.4' cy='14.4' r='2' fill='%23fff'/></svg>">
+<link rel="stylesheet" href="src/css/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#board">Pular para o tabuleiro</a>
+
+<div class="app">
+  <header class="app-bar">
+    <h1 class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" focusable="false"><use href="#i-mine"></use></svg>
+      </span>
+      Campo Minado
+    </h1>
+    <div class="app-bar-actions">
+      <button type="button" class="icon-button" id="btn-help" aria-label="Como jogar" title="Como jogar (H)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-help"></use></svg>
+      </button>
+      <button type="button" class="icon-button" id="btn-stats" aria-label="Estatísticas" title="Estatísticas (E)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-stats"></use></svg>
+      </button>
+      <button type="button" class="icon-button" id="btn-sound" aria-label="Som" aria-pressed="true" title="Som (M)">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="when-on"><use href="#i-sound-on"></use></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="when-off"><use href="#i-sound-off"></use></svg>
+      </button>
+      <button type="button" class="icon-button" id="btn-theme" aria-label="Tema" title="Tema (T)">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="when-light"><use href="#i-sun"></use></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="when-dark"><use href="#i-moon"></use></svg>
+      </button>
+      <button type="button" class="icon-button" id="btn-settings" aria-label="Configurações" title="Configurações (P)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-settings"></use></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <nav class="difficulties" aria-label="Dificuldade">
+      <button type="button" class="chip" data-difficulty="iniciante" aria-pressed="false">
+        <span class="chip-name">Iniciante</span><span class="chip-meta">9 × 9 · 10 minas</span>
+      </button>
+      <button type="button" class="chip" data-difficulty="intermediario" aria-pressed="false">
+        <span class="chip-name">Intermediário</span><span class="chip-meta">16 × 16 · 40 minas</span>
+      </button>
+      <button type="button" class="chip" data-difficulty="especialista" aria-pressed="false">
+        <span class="chip-name">Especialista</span><span class="chip-meta">16 × 30 · 99 minas</span>
+      </button>
+      <button type="button" class="chip" data-difficulty="personalizado" aria-pressed="false">
+        <span class="chip-name">Personalizado</span><span class="chip-meta" id="chip-custom-meta">definir…</span>
+      </button>
+    </nav>
+
+    <section class="panel" aria-label="Partida">
+      <div class="hud">
+        <div class="readout" title="Minas restantes">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#i-mine"></use></svg>
+          <span id="mine-counter" class="digits" aria-live="off">010</span>
+          <span class="sr-only" id="mine-counter-label">minas restantes</span>
+        </div>
+
+        <button type="button" class="face" id="btn-face" aria-label="Nova partida (R)" title="Nova partida (R)">
+          <span class="face-icon" id="face-icon" aria-hidden="true">🙂</span>
+        </button>
+
+        <div class="readout" title="Tempo">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"></use></svg>
+          <span id="timer" class="digits">000</span>
+          <span class="sr-only">segundos</span>
+        </div>
+      </div>
+
+      <div class="tools">
+        <button type="button" class="tool" id="btn-flag-mode" aria-pressed="false" title="Modo bandeira (B) — no celular, também vale segurar a célula">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-flag"></use></svg>
+          <span>Bandeira</span>
+        </button>
+        <button type="button" class="tool" id="btn-hint" title="Dica (D) — destaca uma célula que dá para deduzir">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-bulb"></use></svg>
+          <span>Dica</span>
+        </button>
+        <div class="zoom" role="group" aria-label="Zoom">
+          <button type="button" class="tool tool-square" id="btn-zoom-out" aria-label="Diminuir zoom">−</button>
+          <span class="zoom-value" id="zoom-value">100%</span>
+          <button type="button" class="tool tool-square" id="btn-zoom-in" aria-label="Aumentar zoom">+</button>
+        </div>
+      </div>
+
+      <div class="board-viewport" id="board-viewport">
+        <div class="board" id="board" role="grid" aria-label="Campo minado" aria-describedby="status"></div>
+
+        <div class="result" id="result" hidden>
+          <div class="result-card" role="dialog" aria-modal="false" aria-labelledby="result-title">
+            <p class="result-emoji" id="result-emoji" aria-hidden="true">🎉</p>
+            <h2 id="result-title">Você venceu!</h2>
+            <p class="result-detail" id="result-detail"></p>
+            <p class="result-record" id="result-record" hidden>Novo recorde!</p>
+            <div class="result-actions">
+              <button type="button" class="button primary" id="btn-play-again">Jogar de novo</button>
+              <button type="button" class="button" id="btn-same-seed">Repetir esta semente</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="status" id="status" role="status" aria-live="polite">Clique em qualquer célula para começar.</p>
+    </section>
+
+    <footer class="app-foot">
+      <p class="seed-line">
+        Semente <button type="button" class="seed" id="seed-value" title="Copiar semente">—</button>
+      </p>
+      <p class="hints">
+        <kbd>setas</kbd> mover · <kbd>Espaço</kbd> abrir · <kbd>F</kbd> bandeira · <kbd>Enter</kbd> abrir vizinhos · <kbd>R</kbd> nova partida
+      </p>
+    </footer>
+  </main>
+</div>
+
+<!-- ─── Diálogos ─────────────────────────────────────────────── -->
+
+<dialog class="dialog" id="dlg-custom" aria-labelledby="dlg-custom-title">
+  <form method="dialog" id="form-custom">
+    <h2 id="dlg-custom-title">Tabuleiro personalizado</h2>
+    <div class="field-grid">
+      <label class="field">
+        <span>Linhas</span>
+        <input type="number" id="custom-rows" min="2" max="60" step="1" required>
+      </label>
+      <label class="field">
+        <span>Colunas</span>
+        <input type="number" id="custom-cols" min="2" max="60" step="1" required>
+      </label>
+      <label class="field">
+        <span>Minas</span>
+        <input type="number" id="custom-mines" min="1" step="1" required>
+      </label>
+    </div>
+    <p class="field-note" id="custom-note"></p>
+    <p class="field-error" id="custom-error" role="alert"></p>
+    <menu class="dialog-actions">
+      <button type="button" class="button" data-close-dialog>Cancelar</button>
+      <button type="submit" class="button primary" id="custom-submit">Começar</button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog class="dialog" id="dlg-stats" aria-labelledby="dlg-stats-title">
+  <h2 id="dlg-stats-title">Estatísticas</h2>
+  <div class="stats-wrap">
+    <table class="stats-table">
+      <thead>
+        <tr><th scope="col">Dificuldade</th><th scope="col">Partidas</th><th scope="col">Vitórias</th><th scope="col">Melhor tempo</th><th scope="col">Sequência</th></tr>
+      </thead>
+      <tbody id="stats-body"></tbody>
+    </table>
+  </div>
+  <menu class="dialog-actions">
+    <button type="button" class="button danger" id="btn-clear-stats">Apagar tudo</button>
+    <button type="button" class="button primary" data-close-dialog>Fechar</button>
+  </menu>
+</dialog>
+
+<dialog class="dialog" id="dlg-settings" aria-labelledby="dlg-settings-title">
+  <h2 id="dlg-settings-title">Configurações</h2>
+
+  <fieldset class="fieldset">
+    <legend>Aparência</legend>
+    <div class="segmented" role="radiogroup" aria-label="Tema">
+      <label><input type="radio" name="theme" value="sistema"><span>Sistema</span></label>
+      <label><input type="radio" name="theme" value="claro"><span>Claro</span></label>
+      <label><input type="radio" name="theme" value="escuro"><span>Escuro</span></label>
+    </div>
+  </fieldset>
+
+  <fieldset class="fieldset">
+    <legend>Jogo</legend>
+    <label class="switch">
+      <input type="checkbox" id="set-no-guess">
+      <span class="switch-body"><span class="switch-title">Modo sem chute</span>
+        <span class="switch-note">Gera tabuleiros que sempre podem ser resolvidos por lógica — nunca no palpite.</span></span>
+    </label>
+    <label class="switch">
+      <input type="checkbox" id="set-safe-first">
+      <span class="switch-body"><span class="switch-title">Primeira jogada segura</span>
+        <span class="switch-note">A primeira célula aberta nunca tem mina e abre uma clareira ao redor.</span></span>
+    </label>
+    <label class="switch">
+      <input type="checkbox" id="set-chord">
+      <span class="switch-body"><span class="switch-title">Abrir vizinhos ao clicar no número</span>
+        <span class="switch-note">Com as bandeiras certas ao redor, um clique no número abre o resto.</span></span>
+    </label>
+    <label class="switch">
+      <input type="checkbox" id="set-question">
+      <span class="switch-body"><span class="switch-title">Marca de interrogação</span>
+        <span class="switch-note">Adiciona o estado “?” ao ciclo das bandeiras.</span></span>
+    </label>
+  </fieldset>
+
+  <fieldset class="fieldset">
+    <legend>Feedback</legend>
+    <label class="switch">
+      <input type="checkbox" id="set-sound">
+      <span class="switch-body"><span class="switch-title">Som</span></span>
+    </label>
+    <label class="switch">
+      <input type="checkbox" id="set-vibration">
+      <span class="switch-body"><span class="switch-title">Vibração</span>
+        <span class="switch-note">Só em aparelhos com suporte.</span></span>
+    </label>
+  </fieldset>
+
+  <fieldset class="fieldset">
+    <legend>Semente</legend>
+    <div class="seed-row">
+      <input type="text" id="set-seed" inputmode="numeric" placeholder="ex.: 20260908 ou uma palavra" aria-label="Semente">
+      <button type="button" class="button" id="btn-seed-play">Jogar semente</button>
+    </div>
+    <p class="field-note">A mesma semente, com o mesmo tamanho e as mesmas opções, recria o mesmo tabuleiro.</p>
+  </fieldset>
+
+  <menu class="dialog-actions">
+    <button type="button" class="button primary" data-close-dialog>Fechar</button>
+  </menu>
+</dialog>
+
+<dialog class="dialog" id="dlg-help" aria-labelledby="dlg-help-title">
+  <h2 id="dlg-help-title">Como jogar</h2>
+  <p>Abra todas as células que não têm mina. Cada número diz quantas minas existem
+     nas oito células ao redor — é só disso que você precisa para deduzir o resto.</p>
+
+  <h3>Mouse</h3>
+  <ul class="help-list">
+    <li><b>Clique esquerdo</b> abre a célula.</li>
+    <li><b>Clique direito</b> põe e tira a bandeira.</li>
+    <li><b>Clique do meio</b> (ou os dois botões juntos, ou um clique no número) abre os vizinhos quando as bandeiras já batem com o número.</li>
+  </ul>
+
+  <h3>Teclado</h3>
+  <ul class="help-list">
+    <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> movem · <kbd>Home</kbd>/<kbd>End</kbd> vão ao início/fim da linha</li>
+    <li><kbd>Espaço</kbd> abre · <kbd>F</kbd> marca bandeira · <kbd>Enter</kbd> abre os vizinhos</li>
+    <li><kbd>R</kbd> nova partida · <kbd>D</kbd> dica · <kbd>B</kbd> modo bandeira · <kbd>T</kbd> tema · <kbd>M</kbd> som</li>
+    <li><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> trocam a dificuldade</li>
+  </ul>
+
+  <h3>Celular</h3>
+  <ul class="help-list">
+    <li><b>Toque</b> abre a célula.</li>
+    <li><b>Toque longo</b> põe a bandeira — ou ligue o <b>modo bandeira</b> na barra.</li>
+    <li><b>Toque em um número</b> abre os vizinhos quando as bandeiras batem.</li>
+  </ul>
+
+  <h3>Modo sem chute</h3>
+  <p>Ligado por padrão. O jogo só entrega tabuleiros que um solucionador lógico
+     consegue terminar do início ao fim, então nenhuma partida termina num
+     cara-ou-coroa. Se a geração não achar um tabuleiro assim a tempo, o jogo avisa.</p>
+
+  <menu class="dialog-actions">
+    <button type="button" class="button primary" data-close-dialog>Entendi</button>
+  </menu>
+</dialog>
+
+<!-- ─── Ícones ───────────────────────────────────────────────── -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-mine" viewBox="0 0 32 32">
+    <path d="M16 3v4.5M16 24.5v4.5M3 16h4.5M24.5 16h4.5M7.4 7.4l3.2 3.2M21.4 21.4l3.2 3.2M24.6 7.4l-3.2 3.2M10.6 21.4l-3.2 3.2" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>
+    <circle cx="16" cy="16" r="9.2" fill="currentColor"/>
+    <circle cx="12.6" cy="12.6" r="2.4" fill="#fff" opacity=".9"/>
+  </symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24">
+    <path d="M6 21V3.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M4 21h8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M7 4.2h10.4a.6.6 0 0 1 .46 1L15 9l2.86 3.8a.6.6 0 0 1-.46 1H7z" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+    <path d="M12 7v5.2l3.4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24">
+    <path d="M9.2 17.5a6.5 6.5 0 1 1 5.6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <path d="M9.5 18.5h5M10.2 21.3h3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-help" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+    <path d="M9.4 9.3a2.7 2.7 0 1 1 3.4 2.9c-.6.2-.9.7-.9 1.4v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="11.9" cy="16.8" r="1.2" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-stats" viewBox="0 0 24 24">
+    <path d="M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <rect x="5.5" y="11" width="3.6" height="6" rx="1.2" fill="currentColor"/>
+    <rect x="10.2" y="6.5" width="3.6" height="10.5" rx="1.2" fill="currentColor"/>
+    <rect x="14.9" y="9" width="3.6" height="8" rx="1.2" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="2"/>
+    <path d="M19.4 13.6a7.6 7.6 0 0 0 0-3.2l1.9-1.4-1.9-3.3-2.2.9a7.7 7.7 0 0 0-2.8-1.6L14.1 2h-3.8l-.3 2.4c-1 .3-2 .9-2.8 1.6L5 5.1 3.1 8.4l1.9 1.4a7.6 7.6 0 0 0 0 3.2l-1.9 1.4L5 17.7l2.2-.9c.8.7 1.8 1.3 2.8 1.6l.3 2.4h3.8l.3-2.4c1-.3 2-.9 2.8-1.6l2.2.9 1.9-3.3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="4.2" fill="currentColor"/>
+    <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24">
+    <path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-sound-on" viewBox="0 0 24 24">
+    <path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z" fill="currentColor"/>
+    <path d="M15.4 9a4.2 4.2 0 0 1 0 6M18 6.2a8 8 0 0 1 0 11.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-sound-off" viewBox="0 0 24 24">
+    <path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z" fill="currentColor"/>
+    <path d="M16 9.6l4.6 4.8M20.6 9.6 16 14.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<script type="module" src="src/js/app.js"></script>
+<noscript>
+  <p class="noscript">O Campo Minado precisa de JavaScript ativado para funcionar.</p>
+</noscript>
+</body>
+</html>
