@@ -1,0 +1,63 @@
+name: Publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Uma publicação por vez, sem cancelar uma que já esteja em andamento.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Publicar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # O GITHUB_TOKEN do próprio workflow não tem permissão para CRIAR o site
+      # do Pages na primeira vez (a API responde 403 "Resource not accessible
+      # by integration") — isso só existe pelo dono do repositório, uma vez, em
+      # Settings → Pages → Source. Sem esse passo manual, os passos de deploy
+      # abaixo falhariam a cada push, deixando a main permanentemente vermelha
+      # por um motivo que nenhum push consegue corrigir sozinho. Por isso
+      # verificamos antes e pulamos o deploy de forma limpa até lá.
+      - name: Verifica se o GitHub Pages já foi habilitado
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages")
+          if [ "$status" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=GitHub Pages ainda não habilitado::Vá em Settings → Pages → Build and deployment → Source e escolha 'GitHub Actions'. Depois disso este workflow publica sozinho a cada push, sem precisar mudar nada aqui."
+          fi
+
+      - uses: actions/configure-pages@v5
+        if: steps.check.outputs.enabled == 'true'
+
+      # O jogo é estático e sem build: publica a raiz do repositório como está.
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.check.outputs.enabled == 'true'
+        with:
+          path: '.'
+
+      - id: deployment
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/deploy-pages@v4
