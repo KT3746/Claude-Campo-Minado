@@ -274,6 +274,8 @@ function applyResult(result, { animate = false } = {}) {
       say('Não deu tempo de montar um tabuleiro 100% dedutível — esta partida pode exigir um palpite.', {
         transient: true,
       });
+    } else {
+      say(defaultStatus());
     }
   }
 
