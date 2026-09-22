@@ -175,6 +175,9 @@ function finishAsLoss(game, index, changed) {
     const isMine = game.mines[i] === 1;
     const state = game.cells[i];
     if (isMine && state !== Cell.FLAGGED) {
+      // A mina marcada com "?" deixa de estar marcada ao ser exposta: sem este
+      // desconto o contador de interrogações fica alto para sempre.
+      if (state === Cell.QUESTION) game.questionCount--;
       game.cells[i] = Cell.REVEALED;
       changed.push(i);
     } else if (!isMine && state === Cell.FLAGGED) {
@@ -305,7 +308,8 @@ export function chord(game, index) {
 }
 
 /**
- * Índices das minas ainda não marcadas — usado pela dica.
+ * Índices das células sem mina que ainda não foram abertas — usado pela dica.
+ * Inclui as que estão com bandeira ou interrogação: quem chama decide se filtra.
  * @returns {number[]}
  */
 export function hiddenSafeCells(game) {

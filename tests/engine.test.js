@@ -218,6 +218,23 @@ test('célula com interrogação ainda pode ser aberta', () => {
   assert.equal(game.cells[index], Cell.REVEALED);
 });
 
+test('a mina marcada com "?" deixa de contar como interrogação ao ser exposta', () => {
+  // Ao perder, o motor expõe as minas que não estavam com bandeira. As que
+  // estavam marcadas com "?" viravam célula aberta sem sair do contador, que
+  // ficava alto para o resto da partida.
+  const game = gameFromMap(['..*', '*..']);
+  const outraMina = at(game, 1, 0);
+  toggleFlag(game, outraMina, { allowQuestion: true });
+  toggleFlag(game, outraMina, { allowQuestion: true });
+  assert.equal(game.cells[outraMina], Cell.QUESTION);
+  assert.equal(game.questionCount, 1);
+
+  reveal(game, at(game, 0, 2)); // pisa na outra mina
+  assert.equal(game.status, Status.LOST);
+  assert.equal(game.cells[outraMina], Cell.REVEALED);
+  assert.equal(game.questionCount, 0);
+});
+
 test('não é possível marcar uma célula já aberta', () => {
   const game = gameFromMap(['..', '.*']);
   reveal(game, at(game, 0, 0));

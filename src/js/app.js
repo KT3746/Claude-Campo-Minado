@@ -17,6 +17,7 @@ import {
 } from './engine.js';
 import { deduce } from './solver.js';
 import { seedFromText } from './rng.js';
+import { buildHash, parseHash } from './link.js';
 import { createBoardView } from './view.js';
 import { createAudio } from './sound.js';
 import {
@@ -172,6 +173,9 @@ function defaultStatus() {
 function startGame({ seed } = {}) {
   const config = currentConfig();
   stopTimer();
+  // Se a partida começou por um botão do cartão de resultado, o foco vai junto
+  // para o tabuleiro novo — quem joga no teclado continua de onde estava.
+  const vinhaDoResultado = focusIsInResult();
   hideResult();
   try {
     game = createGame({
@@ -189,7 +193,7 @@ function startGame({ seed } = {}) {
     game = createGame({ ...PRESETS.iniciante, noGuess: settings.noGuess });
   }
   view.mount(game);
-  view.focusCell(Math.floor(game.total / 2), { focus: false });
+  view.focusCell(Math.floor(game.total / 2), { focus: vinhaDoResultado });
   setFace('🙂');
   lastElapsed = 0;
   updateHud();
@@ -210,17 +214,22 @@ function updateChips() {
   el.chipCustomMeta.textContent = `${rows} × ${cols} · ${mines} minas`;
 }
 
+/** Hash que descreve a partida em andamento — a mesma da barra e do botão copiar. */
+function currentHash() {
+  return buildHash({
+    difficulty: settings.difficulty,
+    seed: game.seed,
+    rows: game.rows,
+    cols: game.cols,
+    mines: game.mineCount,
+  });
+}
+
 function updateSeedDisplay() {
   el.seedValue.textContent = String(game.seed);
   el.setSeed.value = String(game.seed);
-  const params = new URLSearchParams({ dif: settings.difficulty, semente: String(game.seed) });
-  if (settings.difficulty === 'personalizado') {
-    params.set('l', String(game.rows));
-    params.set('c', String(game.cols));
-    params.set('m', String(game.mineCount));
-  }
   try {
-    history.replaceState(null, '', `#${params}`);
+    history.replaceState(null, '', currentHash());
   } catch {
     /* file:// em alguns navegadores não permite replaceState */
   }
@@ -335,11 +344,22 @@ function hideResult() {
   el.result.hidden = true;
 }
 
+/**
+ * Esconder o cartão de resultado com o foco dentro dele joga o foco no `<body>`,
+ * e aí as setas param de andar pelo tabuleiro até o jogador tabular de volta.
+ * Quem fecha o cartão devolve o foco para a célula focada.
+ */
+function focusIsInResult() {
+  return el.result.contains(document.activeElement);
+}
+
 // Depois do fim da partida muita gente quer olhar o campo com calma: clicar fora
 // do cartão (ou apertar Esc) esconde o aviso sem começar outra partida.
 el.result.addEventListener('click', (event) => {
   if (event.target === el.result) {
+    const devolverFoco = focusIsInResult();
     hideResult();
+    if (devolverFoco) view.focusCell(view.focusIndex);
     say('Tabuleiro à mostra. R começa outra partida.', { transient: true });
   }
 });
@@ -432,9 +452,19 @@ function giveHint() {
     return;
   }
 
-  const fallback = hiddenSafeCells(game);
-  if (!fallback.length) return;
-  const pick = fallback[Math.floor(Math.random() * fallback.length)];
+  // Sem nada a deduzir, resta apontar uma célula segura de verdade — mas nunca
+  // uma que o jogador marcou: dizer "esta é segura" sobre uma bandeira confunde,
+  // e o que ele precisa saber nesse caso é que a marca está no lugar errado.
+  const livres = hiddenSafeCells(game);
+  const abriveis = livres.filter((i) => game.cells[i] !== Cell.FLAGGED);
+  if (!abriveis.length) {
+    if (livres.length) {
+      say('As células livres que sobraram estão todas com bandeira — alguma está errada.', { transient: true });
+      audio.invalid();
+    }
+    return;
+  }
+  const pick = abriveis[Math.floor(Math.random() * abriveis.length)];
   highlightHint(pick, 'Nada dá para deduzir agora — mas esta célula é segura.');
 }
 
@@ -610,7 +640,9 @@ document.addEventListener('keydown', (event) => {
   const dialogOpen = [...document.querySelectorAll('dialog')].some((d) => d.open);
 
   if (event.key === 'Escape' && !el.result.hidden && !dialogOpen) {
+    const devolverFoco = focusIsInResult();
     hideResult();
+    if (devolverFoco) view.focusCell(view.focusIndex);
     return;
   }
 
@@ -691,10 +723,7 @@ el.playAgain.addEventListener('click', () => restart());
 el.sameSeed.addEventListener('click', () => restart({ sameSeed: true }));
 
 el.seedValue.addEventListener('click', async () => {
-  const link = `${location.href.split('#')[0]}#${new URLSearchParams({
-    dif: settings.difficulty,
-    semente: String(game.seed),
-  })}`;
+  const link = `${location.href.split('#')[0]}${currentHash()}`;
   try {
     await navigator.clipboard.writeText(link);
     say('Link com esta semente copiado.', { transient: true });
@@ -776,7 +805,7 @@ function openStats() {
 
   let hasAny = false;
   for (const key of keys) {
-    const entry = getStats(key);
+    const entry = getStats(key, all);
     if (entry.played === 0 && !PRESETS[key]) continue;
     if (entry.played > 0) hasAny = true;
     const tr = document.createElement('tr');
@@ -921,23 +950,14 @@ $('#btn-settings').addEventListener('click', openSettings);
 /* --- Link compartilhado --------------------------------------------------- */
 
 function readLink() {
-  const params = new URLSearchParams(location.hash.slice(1));
-  const dif = params.get('dif');
-  const seedParam = params.get('semente');
-  if (dif === 'personalizado') {
-    const rows = Number(params.get('l'));
-    const cols = Number(params.get('c'));
-    const mines = Number(params.get('m'));
-    try {
-      settings.custom = normalizeConfig({ rows, cols, mines });
-      settings.difficulty = 'personalizado';
-    } catch {
-      /* link inválido: ignora */
-    }
-  } else if (dif && PRESETS[dif]) {
-    settings.difficulty = dif;
+  const { difficulty, custom, seed } = parseHash(location.hash);
+  if (custom) {
+    settings.custom = custom;
+    settings.difficulty = 'personalizado';
+  } else if (difficulty && PRESETS[difficulty]) {
+    settings.difficulty = difficulty;
   }
-  return seedParam ? seedFromText(seedParam) : undefined;
+  return seed;
 }
 
 /* --- Início --------------------------------------------------------------- */
