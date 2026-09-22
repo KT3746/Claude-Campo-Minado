@@ -45,19 +45,3 @@ export function seedFromText(text) {
   }
   return hash >>> 0;
 }
-
-/**
- * Embaralhamento Fisher-Yates in-place.
- * @template T
- * @param {T[]|Int32Array} list
- * @param {() => number} random
- */
-export function shuffle(list, random) {
-  for (let i = list.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    const tmp = list[i];
-    list[i] = list[j];
-    list[j] = tmp;
-  }
-  return list;
-}
