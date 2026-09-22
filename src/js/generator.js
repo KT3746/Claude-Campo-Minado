@@ -5,9 +5,9 @@
  *  - Clássico: minas sorteadas em qualquer lugar fora da área do primeiro clique.
  *  - Sem chute: sorteia repetidamente até encontrar um tabuleiro que o
  *    solucionador lógico consiga resolver do começo ao fim, ou seja, uma partida
- *    que nunca obriga o jogador a apostar. Se o orçamento de tempo acabar,
- *    devolve o melhor tabuleiro sorteado com `solvable: false`, e a interface
- *    avisa que aquela partida pode exigir um palpite.
+ *    que nunca obriga o jogador a apostar. Se o orçamento de tempo ou de
+ *    tentativas acabar, devolve o último sorteio com `solvable: false`, e a
+ *    interface avisa que aquela partida pode exigir um palpite.
  */
 
 import { computeAdjacency } from './board.js';

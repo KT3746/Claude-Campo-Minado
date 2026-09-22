@@ -5,7 +5,7 @@ build, sem framework**. Abre em qualquer navegador moderno e roda offline.
 
 ![Feito com JavaScript puro](https://img.shields.io/badge/JavaScript-puro-f7df1e)
 ![Sem dependências](https://img.shields.io/badge/depend%C3%AAncias-0-brightgreen)
-![Testes](https://img.shields.io/badge/testes-60-blue)
+![Testes](https://img.shields.io/badge/testes-74-blue)
 
 ## Como rodar
 
@@ -119,10 +119,17 @@ bandeira está no lugar errado.
 npm test
 ```
 
-60 testes em Node puro (`node:test`), cobrindo validação de configuração,
+74 testes em Node puro (`node:test`), cobrindo validação de configuração,
 segurança do primeiro clique, cascata de abertura, bandeiras, *chording*,
-vitória e derrota, as três regras de dedução, a geração sem chute e a
-persistência (incluindo armazenamento bloqueado ou corrompido).
+vitória e derrota, as três regras de dedução, a geração sem chute, o link
+compartilhável e a persistência (incluindo armazenamento bloqueado ou
+corrompido).
+
+Parte deles são **testes de invariante** (`tests/invariantes.test.js`): em vez de
+conferir casos escolhidos a dedo, jogam centenas de partidas aleatórias e exigem
+que certas afirmações valham em todas — que o solucionador nunca minta, que os
+contadores acompanhem o tabuleiro, que vitória e derrota só aconteçam quando de
+fato aconteceram. As sementes são fixas, então qualquer falha é reproduzível.
 
 ## Licença
 

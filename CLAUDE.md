@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm start                                              # servidor local em http://127.0.0.1:4173
-npm test                                               # os 60 testes (node:test, sem dependências)
+npm test                                               # os 74 testes (node:test, sem dependências)
 node --test tests/engine.test.js                       # um arquivo só
 node --test --test-name-pattern="chording" tests/*.js  # um teste só, por nome
 ```
@@ -36,6 +36,8 @@ A divisão que importa: **as regras do jogo não conhecem o DOM**. Todo `src/js/
 board.js   → engine.js ← generator.js → solver.js
                 ↑                          ↑
               app.js  →  view.js       (também alimenta a dica)
+                ↓
+              link.js  (hash da partida: montar e ler)
 ```
 
 **Representação do tabuleiro.** Arrays tipados achatados (`Uint8Array`), índice =
@@ -71,8 +73,11 @@ contra o tabuleiro real e, se não bater, avisa que há bandeira fora do lugar e
 vez de dar uma dica falsa.
 
 **Determinismo por semente.** `mulberry32` (`rng.js`) faz a mesma semente gerar
-sempre o mesmo tabuleiro — é o que permite compartilhar partidas por link
-(`#dif=...&semente=...`, lido em `readLink()`) e escrever testes reprodutíveis.
+sempre o mesmo tabuleiro — é o que permite compartilhar partidas por link e
+escrever testes reprodutíveis. O hash (`#dif=...&semente=...`, mais `l`, `c` e
+`m` no tabuleiro personalizado) é montado e lido só em `link.js`: montar em dois
+lugares já custou um bug em que o botão de copiar esquecia as medidas e quem
+abria o link caía em outro tabuleiro. Qualquer coisa que gere link passa por lá.
 
 **Persistência tolerante a falhas** (`storage.js`). Todo acesso ao `localStorage`
 está dentro de try/catch e o jogo funciona normalmente sem ele (janela anônima,
@@ -90,6 +95,9 @@ na região `aria-live`.
 
 - `tests/helpers.js` tem `gameFromMap(['*..', '...'])`: monta uma partida com
   minas em posições fixas, sem sorteio. É o jeito de testar cenários específicos.
+- `tests/invariantes.test.js` joga centenas de partidas aleatórias e checa o que
+  precisa valer sempre. Foi ele que pegou o vazamento de `questionCount` ao
+  perder. Mexeu no motor ou no solucionador? É o teste que dá o veredito.
 - Opções que afetam a geração (sem chute, primeiro clique seguro) só valem na
   próxima partida, salvo se a atual ainda não começou — ver
   `afterGenerationSettingChange()` em `app.js`.

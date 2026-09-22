@@ -78,9 +78,13 @@ export function loadStats() {
   return readJSON(STATS_KEY, {});
 }
 
-/** @param {string} key dificuldade */
-export function getStats(key) {
-  const all = loadStats();
+/**
+ * Estatísticas de uma dificuldade, com os campos que faltam preenchidos.
+ * @param {string} key dificuldade
+ * @param {object} [all] estatísticas já carregadas — evita reler o armazenamento
+ *   a cada linha quando o chamador vai montar a tabela inteira.
+ */
+export function getStats(key, all = loadStats()) {
   return { ...emptyEntry(), ...(all[key] || {}) };
 }
 

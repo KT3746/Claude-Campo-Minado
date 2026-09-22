@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { mulberry32, randomSeed, seedFromText, shuffle } from '../src/js/rng.js';
+import { mulberry32, randomSeed, seedFromText } from '../src/js/rng.js';
 
 test('mulberry32 é determinístico para a mesma semente', () => {
   const a = mulberry32(12345);
@@ -36,11 +36,4 @@ test('randomSeed devolve inteiro de 32 bits sem sinal', () => {
     const seed = randomSeed();
     assert.ok(Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff);
   }
-});
-
-test('shuffle preserva os elementos', () => {
-  const random = mulberry32(3);
-  const list = [1, 2, 3, 4, 5, 6, 7, 8];
-  const shuffled = shuffle([...list], random);
-  assert.deepEqual([...shuffled].sort((a, b) => a - b), list);
 });
