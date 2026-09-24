@@ -280,7 +280,7 @@ function applyResult(result, { animate = false } = {}) {
   if (justStarted) {
     startTimer();
     if (game.noGuess && !game.guaranteedSolvable) {
-      say('Não deu tempo de montar um tabuleiro 100% dedutível — esta partida pode exigir um palpite.', {
+      say('Não achei um tabuleiro 100% dedutível com tantas minas — esta partida pode exigir um palpite.', {
         transient: true,
       });
     } else {
@@ -765,6 +765,13 @@ function validateCustom() {
   el.customNote.textContent = Number.isFinite(max)
     ? `Máximo de ${max} minas para ${rows} × ${cols}.`
     : '';
+  // Acima de ~24% de minas o gerador quase nunca acha tabuleiro sem chute (ver
+  // generator.js): melhor avisar agora do que depois do primeiro clique.
+  const densidade = Number(el.customMines.value) / (rows * cols);
+  if (settings.noGuess && densidade > 0.24) {
+    el.customNote.textContent +=
+      ' Com tantas minas, o modo sem chute raramente consegue — a partida provavelmente vai exigir palpite.';
+  }
   try {
     normalizeConfig({ rows, cols, mines: Number(el.customMines.value) });
     el.customError.textContent = '';

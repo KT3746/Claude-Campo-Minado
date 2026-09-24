@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm start                                              # servidor local em http://127.0.0.1:4173
-npm test                                               # os 74 testes (node:test, sem dependências)
+npm test                                               # os 77 testes (node:test, sem dependências)
 node --test tests/engine.test.js                       # um arquivo só
 node --test --test-name-pattern="chording" tests/*.js  # um teste só, por nome
 ```
@@ -59,10 +59,15 @@ nunca explode. Qualquer código que leia `game.mines` antes disso vê tudo zero.
 
 **Modo sem chute** (`generator.js` + `solver.js`). O gerador sorteia um campo,
 entrega ao `solveFrom` e só o aceita se o solucionador terminar a partida usando
-apenas dedução. Se o orçamento de tempo (1200 ms) ou de tentativas (30000) acabar,
-devolve o último sorteio com `solvable: false`, e a interface avisa na barra de
-status que aquela partida pode exigir palpite — ele nunca falha, apenas degrada.
-O relógio só é consultado a cada 32 tentativas porque `Date.now()` pesa no laço.
+apenas dedução. O orçamento é de **trabalho** (`maxWork`, tentativas × células),
+não de tempo: se acabar, devolve o *primeiro* sorteio — o tabuleiro clássico
+daquela semente — com `solvable: false`, e a interface avisa que a partida pode
+exigir palpite. Ele nunca falha, apenas degrada. Nunca volte a devolver "o último
+sorteio que coube no tempo": isso fazia a mesma semente gerar tabuleiros
+diferentes em aparelhos de velocidades diferentes, quebrando o link. O relógio
+(`budgetMs`) é só rede de segurança para aparelhos lentos, consultado a cada 32
+tentativas porque `Date.now()` pesa no laço. Densidade medida: até 24% de minas
+sempre acha; de ~28% em diante, nunca.
 
 **O solucionador é o mesmo para gerar e para dar dica.** `deduce()` recebe apenas
 o que o jogador vê (`revealed`, `flagged`) e nunca olha `mines`. Aplica três

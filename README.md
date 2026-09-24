@@ -5,7 +5,7 @@ build, sem framework**. Abre em qualquer navegador moderno e roda offline.
 
 ![Feito com JavaScript puro](https://img.shields.io/badge/JavaScript-puro-f7df1e)
 ![Sem dependências](https://img.shields.io/badge/depend%C3%AAncias-0-brightgreen)
-![Testes](https://img.shields.io/badge/testes-74-blue)
+![Testes](https://img.shields.io/badge/testes-77-blue)
 
 ## Como rodar
 
@@ -105,9 +105,16 @@ resolvível **apenas por dedução**:
 3. **Contagem global** — usa o total de minas restantes, inclusive comparando a
    soma de restrições disjuntas com o que sobrou fora da fronteira.
 
-Na prática, um campo nível especialista costuma sair em menos de 20 sorteios e
-poucos milissegundos. Existe um orçamento de tempo: se ele estourar, o jogo
-avisa na barra de status que aquela partida pode exigir um palpite.
+Na prática, um campo nível especialista sai em poucos milissegundos — no pior
+caso medido, 20 ms. Até cerca de 24% de minas, qualquer tamanho acha tabuleiro
+sem chute; a partir de ~28%, nenhum acha, por mais que se tente. Por isso existe
+um orçamento: se ele acabar, o jogo entrega o tabuleiro clássico daquela semente
+e avisa na barra de status que a partida pode exigir um palpite. O diálogo do
+tabuleiro personalizado já avisa antes, quando a densidade passa do ponto.
+
+O orçamento é medido em trabalho, não em tempo, para que a mesma semente gere o
+mesmo tabuleiro em qualquer aparelho — senão o link compartilhado de uma partida
+densa daria um jogo no celular rápido e outro no lento.
 
 O mesmo solucionador alimenta o botão **Dica**, que só aponta o que o jogador
 poderia ter provado — e avisa quando as deduções não fecham porque alguma
@@ -119,7 +126,7 @@ bandeira está no lugar errado.
 npm test
 ```
 
-74 testes em Node puro (`node:test`), cobrindo validação de configuração,
+77 testes em Node puro (`node:test`), cobrindo validação de configuração,
 segurança do primeiro clique, cascata de abertura, bandeiras, *chording*,
 vitória e derrota, as três regras de dedução, a geração sem chute, o link
 compartilhável e a persistência (incluindo armazenamento bloqueado ou
