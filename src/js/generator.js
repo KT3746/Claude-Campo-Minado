@@ -5,16 +5,29 @@
  *  - Clássico: minas sorteadas em qualquer lugar fora da área do primeiro clique.
  *  - Sem chute: sorteia repetidamente até encontrar um tabuleiro que o
  *    solucionador lógico consiga resolver do começo ao fim, ou seja, uma partida
- *    que nunca obriga o jogador a apostar. Se o orçamento de tempo ou de
- *    tentativas acabar, devolve o último sorteio com `solvable: false`, e a
- *    interface avisa que aquela partida pode exigir um palpite.
+ *    que nunca obriga o jogador a apostar. Se o orçamento acabar, devolve o
+ *    tabuleiro clássico daquela semente com `solvable: false`, e a interface
+ *    avisa que aquela partida pode exigir um palpite.
+ *
+ * O orçamento é medido em trabalho (tentativas × células), não em tempo, para
+ * que a mesma semente dê o mesmo tabuleiro em qualquer aparelho — é isso que
+ * sustenta o link compartilhado. Medido: até 24% de minas, todo sorteio acha um
+ * tabuleiro sem chute bem antes do limite (o especialista, com 21%, em no máximo
+ * ~100 tentativas); a partir de ~28% nenhum acha, por mais que se tente. O limite
+ * serve para desistir cedo desses casos sem saída.
+ *
+ * O relógio continua existindo, mas só como rede de segurança para aparelhos
+ * muito lentos. Quando desiste, por qualquer motivo, o gerador devolve o
+ * primeiro sorteio — que só depende da semente —, nunca "o último que coube no
+ * tempo", que dependeria da velocidade do aparelho.
  */
 
 import { computeAdjacency } from './board.js';
 import { solveFrom } from './solver.js';
 
-const DEFAULT_BUDGET_MS = 1200;
+const DEFAULT_MAX_WORK = 3_000_000;
 const DEFAULT_MAX_ATTEMPTS = 30000;
+const DEFAULT_BUDGET_MS = 2500;
 
 /**
  * Células proibidas para minas: o primeiro clique e, quando cabe, seus vizinhos
@@ -65,8 +78,10 @@ function placeRandom({ total, mineCount, zone, random, mines }) {
  * @param {() => number} params.random
  * @param {boolean} [params.noGuess]
  * @param {boolean} [params.safeArea]
- * @param {number} [params.budgetMs]
+ * @param {number} [params.maxWork] orçamento em células sorteadas e resolvidas
+ *   (tentativas × células) — o limite determinístico
  * @param {number} [params.maxAttempts]
+ * @param {number} [params.budgetMs] rede de segurança para aparelhos lentos
  * @returns {{mines: Uint8Array, solvable: boolean, attempts: number}}
  */
 export function generateMines({
@@ -78,8 +93,9 @@ export function generateMines({
   random,
   noGuess = false,
   safeArea = true,
-  budgetMs = DEFAULT_BUDGET_MS,
+  maxWork = DEFAULT_MAX_WORK,
   maxAttempts = DEFAULT_MAX_ATTEMPTS,
+  budgetMs = DEFAULT_BUDGET_MS,
 }) {
   const total = rows * cols;
   const zone = safeZone({ safeIndex, neighbors, total, mineCount, safeArea });
@@ -90,11 +106,17 @@ export function generateMines({
     return { mines, solvable: false, attempts: 1 };
   }
 
+  const limit = Math.max(1, Math.min(maxAttempts, Math.floor(maxWork / total)));
   const deadline = Date.now() + budgetMs;
+  /** @type {Uint8Array|null} */
+  let first = null;
   let attempts = 0;
-  while (attempts < maxAttempts) {
+  while (attempts < limit) {
     attempts++;
     placeRandom({ total, mineCount, zone, random, mines });
+    // O primeiro sorteio é exatamente o tabuleiro do modo clássico para esta
+    // semente: é o que devolvemos se desistirmos.
+    if (first === null) first = mines.slice();
     const adjacent = computeAdjacency(mines, neighbors);
     const { solvable } = solveFrom({
       mines,
@@ -108,5 +130,5 @@ export function generateMines({
     // Checa o relógio a cada 32 tentativas: Date.now() é caro no laço quente.
     if ((attempts & 31) === 0 && Date.now() > deadline) break;
   }
-  return { mines, solvable: false, attempts };
+  return { mines: first, solvable: false, attempts };
 }

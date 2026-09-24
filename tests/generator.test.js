@@ -110,6 +110,45 @@ test('quando o orçamento acaba, devolve um tabuleiro válido marcado como não 
   assert.equal(countMines(mines), 200, 'mesmo sem garantia, o tabuleiro é jogável');
 });
 
+/* --- Desistência determinística ------------------------------------------ */
+
+// 16×30 com 150 minas (31%): nenhum sorteio fecha só com lógica, então o
+// gerador sempre desiste. É o cenário em que a velocidade do aparelho mudava o
+// tabuleiro — e com ele o link compartilhado.
+const SEM_SAIDA = { mineCount: 150, safeIndex: 240, noGuess: true, maxWork: 480 * 200 };
+
+test('ao desistir, devolve o tabuleiro clássico daquela semente', () => {
+  const { rows, cols, neighbors } = setup(16, 30);
+  const semChute = generateMines({ rows, cols, neighbors, ...SEM_SAIDA, random: mulberry32(77) });
+  const classico = generateMines({ rows, cols, neighbors, ...SEM_SAIDA, noGuess: false, random: mulberry32(77) });
+  assert.equal(semChute.solvable, false);
+  assert.deepEqual([...semChute.mines], [...classico.mines]);
+});
+
+test('o tabuleiro de uma desistência não depende do relógio', () => {
+  // Antes, o gerador devolvia "o último sorteio que coube no tempo": um aparelho
+  // rápido e um lento chegavam a tabuleiros diferentes com a mesma semente.
+  const { rows, cols, neighbors } = setup(16, 30);
+  const rapido = generateMines({ rows, cols, neighbors, ...SEM_SAIDA, random: mulberry32(9), budgetMs: 1e9 });
+  const lento = generateMines({ rows, cols, neighbors, ...SEM_SAIDA, random: mulberry32(9), budgetMs: 0 });
+  assert.ok(rapido.attempts > lento.attempts, 'o cenário precisa de fato cortar em pontos diferentes');
+  assert.deepEqual([...rapido.mines], [...lento.mines]);
+});
+
+test('o orçamento de trabalho limita as tentativas pelo tamanho do tabuleiro', () => {
+  const { rows, cols, neighbors } = setup(16, 30);
+  const { attempts } = generateMines({
+    rows,
+    cols,
+    neighbors,
+    ...SEM_SAIDA,
+    random: mulberry32(3),
+    maxWork: 480 * 50,
+    budgetMs: 1e9,
+  });
+  assert.equal(attempts, 50);
+});
+
 test('a mesma semente gera o mesmo tabuleiro', () => {
   const { rows, cols, neighbors } = setup(12, 12);
   const options = { rows, cols, mineCount: 20, safeIndex: 30, neighbors, noGuess: true };
