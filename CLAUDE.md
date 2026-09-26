@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm start                                              # servidor local em http://127.0.0.1:4173
-npm test                                               # os 77 testes (node:test, sem dependências)
+npm test                                               # os 78 testes (node:test, sem dependências)
 node --test tests/engine.test.js                       # um arquivo só
 node --test --test-name-pattern="chording" tests/*.js  # um teste só, por nome
 ```
