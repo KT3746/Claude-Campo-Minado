@@ -42,12 +42,24 @@ test('semente vazia é ignorada em vez de virar zero', () => {
 test('personalizado sem as medidas não é aceito pela metade', () => {
   // Sem `l`, `c` e `m` não há tabuleiro que o link consiga descrever: melhor não
   // devolver dificuldade nenhuma do que mandar quem chama jogar 0×0.
-  assert.deepEqual(parseHash('#dif=personalizado&semente=5'), { seed: 5 });
+  const lido = parseHash('#dif=personalizado&semente=5');
+  assert.equal('difficulty' in lido, false);
+  assert.equal('custom' in lido, false);
+  assert.equal(lido.seed, 5);
 });
 
 test('personalizado com medidas impossíveis também é descartado', () => {
-  assert.deepEqual(parseHash('#dif=personalizado&l=1&c=1&m=50'), {});
-  assert.deepEqual(parseHash('#dif=personalizado&l=99&c=99&m=1'), {});
+  for (const hash of ['#dif=personalizado&l=1&c=1&m=50', '#dif=personalizado&l=99&c=99&m=1']) {
+    const lido = parseHash(hash);
+    assert.equal('difficulty' in lido, false);
+    assert.equal('custom' in lido, false);
+  }
+});
+
+test('link descartado explica o motivo, para a interface avisar o jogador', () => {
+  // Antes o link inválido caía no Iniciante em silêncio.
+  assert.match(parseHash('#dif=personalizado&l=99&c=9&m=10').problem, /60 linhas ou colunas/);
+  assert.equal('problem' in parseHash('#dif=especialista&semente=1'), false);
 });
 
 /* --- Ida e volta ----------------------------------------------------------- */
