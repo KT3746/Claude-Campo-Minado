@@ -170,7 +170,12 @@ function defaultStatus() {
 
 /* --- Ciclo de vida da partida -------------------------------------------- */
 
-function startGame({ seed } = {}) {
+/**
+ * @param {object} [options]
+ * @param {number} [options.seed]
+ * @param {string} [options.aviso] mensagem para o jogador no lugar do status padrão
+ */
+function startGame({ seed, aviso } = {}) {
   const config = currentConfig();
   stopTimer();
   // Se a partida começou por um botão do cartão de resultado, o foco vai junto
@@ -187,10 +192,15 @@ function startGame({ seed } = {}) {
       safeFirstClick: settings.safeFirstClick,
     });
   } catch (error) {
-    say(error.message);
+    // Dizer agora seria inútil: o say() do fim da função apagaria a mensagem.
+    aviso = error.message;
     settings.difficulty = 'iniciante';
     saveSettings(settings);
-    game = createGame({ ...PRESETS.iniciante, noGuess: settings.noGuess });
+    game = createGame({
+      ...PRESETS.iniciante,
+      noGuess: settings.noGuess,
+      safeFirstClick: settings.safeFirstClick,
+    });
   }
   view.mount(game);
   view.focusCell(Math.floor(game.total / 2), { focus: vinhaDoResultado });
@@ -199,7 +209,8 @@ function startGame({ seed } = {}) {
   updateHud();
   updateChips();
   updateSeedDisplay();
-  say(defaultStatus());
+  if (aviso) say(aviso, { transient: true });
+  else say(defaultStatus());
 }
 
 function restart({ sameSeed = false } = {}) {
@@ -498,14 +509,14 @@ el.board.addEventListener('pointerdown', (event) => {
   if (index < 0 || isOver(game)) return;
 
   if (event.pointerType === 'mouse') {
-    if (event.buttons === 3 || event.button === 1) {
+    if (event.button === 1) {
       event.preventDefault();
       press.mode = 'chord';
     } else if (event.button === 2) {
+      // O direito marca na hora, mas a pressão continua registrada: se o esquerdo
+      // vier em seguida, os dois juntos viram acorde (ver o pointermove).
       flagAt(index);
       press.mode = 'none';
-      press.index = -1;
-      return;
     } else if (event.button === 0) {
       press.mode = settings.flagMode ? 'flag' : 'reveal';
     } else {
@@ -527,16 +538,20 @@ el.board.addEventListener('pointerdown', (event) => {
   press.pointerId = event.pointerId;
   press.x = event.clientX;
   press.y = event.clientY;
-  if (press.mode !== 'none') {
+  if (press.mode === 'chord') {
+    showChordPress(index);
+  } else if (press.mode !== 'none') {
     setFace('😮');
-    if (press.mode === 'chord') {
-      view.setPressed(index, true);
-      forEachChordTarget(index, (nb) => view.setPressed(nb, true));
-    } else if (game.cells[index] !== Cell.REVEALED) {
-      view.setPressed(index, true);
-    }
+    if (game.cells[index] !== Cell.REVEALED) view.setPressed(index, true);
   }
 });
+
+function showChordPress(index) {
+  setFace('😮');
+  view.clearPressed();
+  view.setPressed(index, true);
+  forEachChordTarget(index, (nb) => view.setPressed(nb, true));
+}
 
 function forEachChordTarget(index, fn) {
   const base = index * 8;
@@ -549,6 +564,13 @@ function forEachChordTarget(index, fn) {
 
 el.board.addEventListener('pointermove', (event) => {
   if (press.index < 0 || event.pointerId !== press.pointerId) return;
+  // Pelo padrão de Pointer Events, apertar um segundo botão com o primeiro ainda
+  // pressionado não gera outro pointerdown, e sim um pointermove com `buttons`
+  // atualizado. É aqui, então, que esquerdo + direito vira acorde.
+  if (event.pointerType === 'mouse' && (event.buttons & 3) === 3 && press.mode !== 'chord') {
+    press.mode = 'chord';
+    showChordPress(press.index);
+  }
   if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > MOVE_TOLERANCE) cancelPress();
 });
 
@@ -956,24 +978,34 @@ $('#btn-settings').addEventListener('click', openSettings);
 
 /* --- Link compartilhado --------------------------------------------------- */
 
+/** Aplica a dificuldade do link e devolve o que `startGame` precisa dele. */
 function readLink() {
-  const { difficulty, custom, seed } = parseHash(location.hash);
+  const { difficulty, custom, seed, problem } = parseHash(location.hash);
   if (custom) {
     settings.custom = custom;
     settings.difficulty = 'personalizado';
   } else if (difficulty && PRESETS[difficulty]) {
     settings.difficulty = difficulty;
   }
-  return seed;
+  return { seed, aviso: problem };
 }
+
+// Colar outro link na aba em que o jogo já está aberto só muda o hash, sem
+// recarregar a página. Sem isto, o endereço passava a descrever uma partida e a
+// tela mostrava outra. O replaceState de updateSeedDisplay não dispara o evento.
+window.addEventListener('hashchange', () => {
+  if (location.hash === currentHash()) return;
+  for (const dialog of document.querySelectorAll('dialog')) dialog.close();
+  startGame(readLink());
+});
 
 /* --- Início --------------------------------------------------------------- */
 
-const linkSeed = readLink();
+const link = readLink();
 document.documentElement.dataset.theme = settings.theme;
 el.btnSound.setAttribute('aria-pressed', String(settings.sound));
 applyZoom();
-startGame({ seed: linkSeed });
+startGame(link);
 
 if (!settings.seenHelp) {
   settings.seenHelp = true;

@@ -34,7 +34,7 @@ export function buildHash({ difficulty, seed, rows, cols, mines }) {
  * lança: simplesmente não devolve aquele campo.
  *
  * @param {string} hash com ou sem o `#` inicial
- * @returns {{difficulty?: string, custom?: {rows:number, cols:number, mines:number}, seed?: number}}
+ * @returns {{difficulty?: string, custom?: {rows:number, cols:number, mines:number}, seed?: number, problem?: string}}
  */
 export function parseHash(hash) {
   const params = new URLSearchParams(String(hash).replace(/^#/, ''));
@@ -50,9 +50,11 @@ export function parseHash(hash) {
         cols: Number(params.get('c')),
         mines: Number(params.get('m')),
       });
-    } catch {
-      // Medidas ausentes ou impossíveis: quem chama decide o que fazer sem elas.
+    } catch (error) {
+      // Medidas ausentes ou impossíveis: quem chama decide o que fazer sem elas,
+      // mas recebe o motivo para contar ao jogador por que o link não valeu.
       delete result.difficulty;
+      result.problem = `Link com tabuleiro inválido: ${error.message}`;
     }
   }
 
