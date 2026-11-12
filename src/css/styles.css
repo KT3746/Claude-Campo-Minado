@@ -1189,7 +1189,8 @@ kbd {
 
   .board {
     --chrome: 20rem;
-    --fit-width: calc((100vw - 3rem) / var(--cols, 9));
+    /* desconta também os vãos entre as células (~5% de cada) e as margens do painel */
+    --fit-width: calc((100vw - 4.25rem) / (var(--cols, 9) * 1.05 + 0.2));
   }
 
   .board-viewport {
