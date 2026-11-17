@@ -56,6 +56,7 @@ const el = {
   status: $('#status'),
   seedValue: $('#seed-value'),
   chips: [...document.querySelectorAll('.chip')],
+  chipDailyMeta: $('#chip-daily-meta'),
   chipCustomMeta: $('#chip-custom-meta'),
   flagMode: $('#btn-flag-mode'),
   hint: $('#btn-hint'),
@@ -168,6 +169,44 @@ function defaultStatus() {
   return '';
 }
 
+/* --- Desafio do dia ------------------------------------------------------- */
+// Um tabuleiro Intermediário por dia, sorteado a partir da data: quem jogar no
+// mesmo dia (com o modo sem chute igual) recebe o mesmo campo. O melhor tempo
+// do dia fica guardado só neste aparelho.
+
+const DAILY_KEY = 'campo-minado:diario';
+let dailyDate = null; // data (AAAA-MM-DD) quando a partida em andamento é o desafio do dia
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function loadDaily() {
+  try {
+    const data = JSON.parse(localStorage.getItem(DAILY_KEY));
+    return data && typeof data.date === 'string' && Number.isFinite(data.best) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDaily(data) {
+  try {
+    localStorage.setItem(DAILY_KEY, JSON.stringify(data));
+  } catch {
+    /* armazenamento indisponível: o desafio continua, só não guarda o tempo */
+  }
+}
+
+function startDaily() {
+  settings.difficulty = 'intermediario';
+  saveSettings(settings);
+  const date = todayKey();
+  const [, mes, dia] = date.split('-');
+  startGame({ seed: seedFromText(`diario-${date}`), daily: date, aviso: `Desafio de ${dia}/${mes}: o mesmo campo para todo mundo hoje.` });
+}
+
 /* --- Ciclo de vida da partida -------------------------------------------- */
 
 /**
@@ -175,7 +214,8 @@ function defaultStatus() {
  * @param {number} [options.seed]
  * @param {string} [options.aviso] mensagem para o jogador no lugar do status padrão
  */
-function startGame({ seed, aviso } = {}) {
+function startGame({ seed, aviso, daily = null } = {}) {
+  dailyDate = daily;
   const config = currentConfig();
   stopTimer();
   // Se a partida começou por um botão do cartão de resultado, o foco vai junto
@@ -219,8 +259,11 @@ function restart({ sameSeed = false } = {}) {
 
 function updateChips() {
   for (const chip of el.chips) {
-    chip.setAttribute('aria-pressed', String(chip.dataset.difficulty === settings.difficulty));
+    const pressed = dailyDate ? chip.dataset.difficulty === 'diario' : chip.dataset.difficulty === settings.difficulty;
+    chip.setAttribute('aria-pressed', String(pressed));
   }
+  const daily = loadDaily();
+  el.chipDailyMeta.textContent = daily && daily.date === todayKey() ? `hoje: ${formatSeconds(daily.best)}` : '16 × 16 · 40 minas';
   const { rows, cols, mines } = settings.custom;
   el.chipCustomMeta.textContent = `${rows} × ${cols} · ${mines} minas`;
 }
@@ -345,6 +388,13 @@ function showResult({ won, seconds, entry, isRecord }) {
   el.resultDetail.textContent = won
     ? `${config.label} em ${formatSeconds(seconds)}${best && !isRecord ? ` · melhor: ${best}` : ''}`
     : `${config.label} · ${formatSeconds(seconds)} até a mina${best ? ` · melhor: ${best}` : ''}`;
+  if (won && dailyDate) {
+    const daily = loadDaily();
+    const prev = daily && daily.date === dailyDate ? daily.best : null;
+    if (prev === null || seconds < prev) saveDaily({ date: dailyDate, best: seconds });
+    el.resultDetail.textContent = `Desafio do dia em ${formatSeconds(seconds)}${prev !== null ? (seconds < prev ? ' · novo melhor de hoje!' : ` · melhor de hoje: ${formatSeconds(prev)}`) : ''}`;
+    updateChips();
+  }
   el.resultRecord.hidden = !isRecord;
   el.result.hidden = false;
   el.playAgain.focus({ preventScroll: true });
@@ -761,6 +811,10 @@ for (const chip of el.chips) {
     const key = chip.dataset.difficulty;
     if (key === 'personalizado') {
       openCustomDialog();
+      return;
+    }
+    if (key === 'diario') {
+      startDaily();
       return;
     }
     settings.difficulty = key;

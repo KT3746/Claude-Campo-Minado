@@ -37,6 +37,8 @@ npx serve .
   por um clique no próprio número.
 - Marca de interrogação opcional, dica honesta, cronômetro, contador de minas,
   recordes e estatísticas por dificuldade.
+- **Desafio do dia**: um tabuleiro Intermediário novo por dia, sorteado pela
+  data — todo mundo recebe o mesmo campo — com o seu melhor tempo do dia.
 - Partidas com semente: a mesma semente recria o mesmo tabuleiro, e o link da
   partida pode ser copiado e compartilhado.
 
